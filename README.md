@@ -22,8 +22,8 @@ EC2 (Python Flask – AIOps Service)
    └── Unresolved after 10 minutes → Email Escalation
 ```
 
-📸 **Screenshot placeholder:**
-`architecture/architecture.png`
+<img width="1536" height="1024" alt="ChatGPT Image Jan 14, 2026, 06_11_45 PM" src="https://github.com/user-attachments/assets/cf01e43d-fc8a-4ef9-9c40-332ee82aabb8" />
+
 
 ---
 
@@ -74,7 +74,7 @@ pip install flask requests msal
 
 ## 5. AIOps Flask Service
 
-### File: `service/aiops_webhook.py`
+### File: `aiops_webhook.py`
 
 **Endpoints**
 
@@ -99,6 +99,8 @@ pip install flask requests msal
 
 ### File: `/etc/aiops.env`
 
+path:/etc/aiops.env
+
 ```ini
 CORALOGIX_API_KEY=xxxxx
 CORALOGIX_API_BASE=https://api.ap1.coralogix.com
@@ -113,7 +115,9 @@ EMAIL_TO=alerts@domain.com
 
 ## 7. systemd Service Setup
 
-### File: `service/aiops.service`
+### File: `aiops.service`
+
+path: /etc/systemd/system/aiops.service
 
 ```ini
 [Unit]
