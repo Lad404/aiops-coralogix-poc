@@ -176,7 +176,9 @@ curl -X POST http://localhost:5000/coralogix/webhook \
 }'
 ```
 
-<img width="1882" height="255" alt="Screenshot 2026-01-12 150700" src="https://github.com/user-attachments/assets/63b19228-ef7e-4bd1-950e-d33c0665b92b" />
+<img width="1550" height="201" alt="image" src="https://github.com/user-attachments/assets/9283d5b4-3000-462a-a17b-551bd900e666" />
+
+<img width="1229" height="528" alt="image" src="https://github.com/user-attachments/assets/d90b13f0-afda-4659-bc72-fa5212e0b30c" />
 
 
 ---
@@ -188,14 +190,17 @@ curl -X POST http://localhost:5000/coralogix/webhook \
 * Outbound webhook UI failed
 * Alerts not delivered consistently
 
-📸 `screenshots/coralogix/webhook-error.png`
+<img width="1913" height="969" alt="Screenshot 2026-01-14 163210" src="https://github.com/user-attachments/assets/b112455c-f2f3-4009-bbdc-f048ec4b613b" />
+
 
 ### Microsoft Graph
 
 * Email escalation failed with HTTP 403
 * Tenant policy blocks app-only mail sending
 
-📸 `screenshots/logs/graph-403.png`
+<img width="1329" height="184" alt="Screenshot 2026-01-12 153638" src="https://github.com/user-attachments/assets/2d617933-037c-407b-9b6b-9547793c82c0" />
+
+<img width="1835" height="666" alt="Screenshot 2026-01-12 154402" src="https://github.com/user-attachments/assets/666f682f-2916-418c-9db5-50c7a265438e" />
 
 ---
 
@@ -218,32 +223,3 @@ This POC successfully validates:
 Remaining gaps are **platform and policy limitations**, not design issues.
 
 ---
-
-# 🚀 How to Push This to GitHub (Commands)
-
-```bash
-git init
-git add .
-git commit -m "Initial AIOps Coralogix POC"
-git branch -M main
-git remote add origin https://github.com/<your-org>/aiops-coralogix-poc.git
-git push -u origin main
-```
-
----
-
-## ✅ Final Recommendation
-
-✔ GitHub + README.md is **better than Word**
-✔ Easier to maintain
-✔ Screenshot-friendly
-✔ Industry standard
-
-If you want, next I can:
-
-* Generate the **architecture diagram**
-* Convert your existing Word content into README automatically
-* Prepare a **public-safe version** (no sensitive terms)
-* Create a **v2 branch** plan
-
-Just tell me the next step.
