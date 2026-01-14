@@ -46,8 +46,6 @@ EC2 (Python Flask – AIOps Service)
 * Instance type: t2.micro (POC)
 * Open inbound port **5000**
 
-📸 `screenshots/ec2/ec2-launch.png`
-
 ---
 
 ### Step 2: SSH into EC2
@@ -55,8 +53,6 @@ EC2 (Python Flask – AIOps Service)
 ```bash
 ssh ubuntu@<EC2_PUBLIC_IP>
 ```
-
-📸 `screenshots/ec2/ssh.png`
 
 ---
 
@@ -67,8 +63,6 @@ python3 -m venv aiops-venv
 source aiops-venv/bin/activate
 pip install flask requests msal
 ```
-
-📸 `screenshots/ec2/python-setup.png`
 
 ---
 
@@ -90,9 +84,6 @@ pip install flask requests msal
   "alert_action": "TRIGGERED | RESOLVED"
 }
 ```
-
-📸 `screenshots/code/aiops_webhook.png`
-
 ---
 
 ## 6. Environment Configuration
@@ -108,8 +99,6 @@ TEAMS_WEBHOOK_URL=https://<power-automate-url>
 EMAIL_FROM=alerts@domain.com
 EMAIL_TO=alerts@domain.com
 ```
-
-📸 `screenshots/ec2/env-file.png`
 
 ---
 
@@ -143,8 +132,6 @@ sudo systemctl enable aiops.service
 sudo systemctl start aiops.service
 ```
 
-📸 `screenshots/ec2/systemd.png`
-
 ---
 
 ## 8. Teams Integration (Power Automate)
@@ -153,7 +140,7 @@ sudo systemctl start aiops.service
 * Connect to Teams channel
 * Enable workflow
 
-📸 `screenshots/teams/power-automate.png`
+<img width="1079" height="796" alt="image" src="https://github.com/user-attachments/assets/e0f843a1-6dcf-4c9f-a6bc-6bef4960f5e2" />
 
 ---
 
@@ -171,7 +158,7 @@ curl http://localhost:5000/health
 curl -X POST http://localhost:5000/coralogix/webhook \
 -H "Content-Type: application/json" \
 -d '{
-  "alert_id": "test-001",
+  "alert_id": "test-xx",
   "alert_name": "CPU Spike Test",
   "alert_action": "TRIGGERED"
 }'
@@ -183,13 +170,14 @@ curl -X POST http://localhost:5000/coralogix/webhook \
 curl -X POST http://localhost:5000/coralogix/webhook \
 -H "Content-Type: application/json" \
 -d '{
-  "alert_id": "test-001",
+  "alert_id": "test-xx",
   "alert_name": "CPU Spike Test",
   "alert_action": "RESOLVED"
 }'
 ```
 
-📸 `screenshots/logs/journalctl.png`
+<img width="1882" height="255" alt="Screenshot 2026-01-12 150700" src="https://github.com/user-attachments/assets/63b19228-ef7e-4bd1-950e-d33c0665b92b" />
+
 
 ---
 
