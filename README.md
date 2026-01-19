@@ -21,7 +21,7 @@ The solution is deployed on an **AWS EC2 instance**, exposed securely over **HTT
 
 ---
 
-## 1️⃣ GitHub-Ready Architecture Diagram (Mermaid)
+## Architecture Diagram (Mermaid)
 
 ```mermaid
 flowchart LR
