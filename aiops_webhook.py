@@ -1,7 +1,6 @@
 import os
 import time
 import threading
-import json
 import logging
 import requests
 from flask import Flask, request, jsonify
@@ -10,15 +9,15 @@ from msal import ConfidentialClientApplication
 # -------------------------------------------------
 # Logging
 # -------------------------------------------------
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s aiops: %(message)s"
+)
 LOG = logging.getLogger("aiops")
 
 # -------------------------------------------------
-# Configuration (READ FROM ENV VARS ONLY)
+# Environment variables
 # -------------------------------------------------
-CORALOGIX_API_KEY = os.getenv("CORALOGIX_API_KEY")
-CORALOGIX_API_BASE = os.getenv("CORALOGIX_API_BASE")
-
 TEAMS_WEBHOOK_URL = os.getenv("TEAMS_WEBHOOK_URL")
 
 GRAPH_TENANT_ID = os.getenv("GRAPH_TENANT_ID")
@@ -33,11 +32,11 @@ EMAIL_TO = os.getenv("EMAIL_TO")
 # -------------------------------------------------
 app = Flask(__name__)
 
-# Track active alerts
+# Track alerts waiting for resolution
 pending_alerts = {}
 
 # -------------------------------------------------
-# Microsoft Graph helpers
+# Microsoft Graph helpers (Outlook escalation)
 # -------------------------------------------------
 def get_graph_token():
     app_msal = ConfidentialClientApplication(
@@ -61,7 +60,10 @@ def send_email(subject, body):
     payload = {
         "message": {
             "subject": subject,
-            "body": {"contentType": "Text", "content": body},
+            "body": {
+                "contentType": "Text",
+                "content": body
+            },
             "toRecipients": [
                 {"emailAddress": {"address": EMAIL_TO}}
             ]
@@ -73,17 +75,21 @@ def send_email(subject, body):
         "Content-Type": "application/json"
     }
 
-    r = requests.post(url, headers=headers, json=payload)
-    LOG.info("Email sent: %s", r.status_code)
-
+    r = requests.post(url, headers=headers, json=payload, timeout=10)
+    LOG.info("Email sent | status=%s", r.status_code)
 
 # -------------------------------------------------
-# Teams helper
+# Microsoft Teams helper
 # -------------------------------------------------
-def send_to_teams(title, message):
+def send_to_teams(alert_name, alert_id, instance_id, status):
     payload = {
-        "title": title,
-        "message": message
+        "title": "Coralogix Alert Update",
+        "text": (
+            f"**Alert Name:** {alert_name}\n\n"
+            f"**Alert ID:** {alert_id}\n\n"
+            f"**Instance ID:** {instance_id}\n\n"
+            f"**Status:** {status}"
+        )
     }
 
     r = requests.post(
@@ -93,27 +99,36 @@ def send_to_teams(title, message):
         timeout=10
     )
 
-    LOG.info("Teams webhook status: %s | response: %s", r.status_code, r.text)
+    LOG.info(
+        "Teams webhook status=%s | response=%s",
+        r.status_code,
+        r.text
+    )
 
 # -------------------------------------------------
-# Alert monitoring logic
+# Alert monitoring logic (escalation timer)
 # -------------------------------------------------
-def monitor_alert(alert_id, alert_name, wait_minutes=10):
+def monitor_alert(alert_id, alert_name, instance_id, wait_minutes=10):
     LOG.info("Monitoring alert %s", alert_id)
     time.sleep(wait_minutes * 60)
 
-    # If still pending → unresolved
     if alert_id in pending_alerts:
         LOG.info("Alert %s unresolved, escalating", alert_id)
+
         send_email(
             subject=f"Unresolved alert: {alert_name}",
-            body=f"Alert {alert_name} ({alert_id}) did not resolve within {wait_minutes} minutes."
+            body=(
+                f"Alert Name: {alert_name}\n"
+                f"Alert ID: {alert_id}\n"
+                f"Instance ID: {instance_id}\n\n"
+                f"The alert did not resolve within {wait_minutes} minutes."
+            )
         )
+
         pending_alerts.pop(alert_id, None)
 
-
 # -------------------------------------------------
-# Webhook endpoint
+# Coralogix webhook endpoint
 # -------------------------------------------------
 @app.route("/coralogix/webhook", methods=["POST"])
 def coralogix_webhook():
@@ -121,45 +136,61 @@ def coralogix_webhook():
     LOG.info("Webhook received: %s", payload)
 
     alert_id = payload.get("alert_id")
-    alert_name = payload.get("alert_name")
-    action = payload.get("alert_action")
+    alert_name = payload.get("alert_name", "Unknown Alert")
+    raw_action = payload.get("alert_action", "")
+    instance_id = payload.get("instance_id", "unknown")
+
+    action = raw_action.strip().upper()
+
+    LOG.info(
+        "Parsed action=%s alert_id=%s instance_id=%s",
+        action, alert_id, instance_id
+    )
 
     if not alert_id or not action:
         return jsonify({"error": "invalid payload"}), 400
 
-    # ALERT RESOLVED → Teams
-    if action.upper() == "RESOLVED":
-        pending_alerts.pop(alert_id, None)
-        send_to_teams(
-            title="Alert Resolved",
-            message=f"Alert **{alert_name}** ({alert_id}) has been resolved."
-        )
-        return jsonify({"status": "resolved"}), 200
+    # -------------------------
+    # ALERT TRIGGERED
+    # -------------------------
+    if action in ["TRIGGER", "TRIGGERED"]:
+        pending_alerts[alert_id] = {
+            "alert_name": alert_name,
+            "instance_id": instance_id
+        }
 
-    # ALERT TRIGGERED → start monitoring
-    if action.upper() == "TRIGGERED":
-        pending_alerts[alert_id] = payload
+        LOG.info("Alert triggered, starting monitor")
+
         t = threading.Thread(
             target=monitor_alert,
-            args=(alert_id, alert_name),
+            args=(alert_id, alert_name, instance_id),
             daemon=True
         )
         t.start()
+
         return jsonify({"status": "monitoring"}), 202
+
+    # -------------------------
+    # ALERT RESOLVED
+    # -------------------------
+    if action in ["RESOLVE", "RESOLVED"]:
+        pending_alerts.pop(alert_id, None)
+
+        LOG.info("Sending RESOLVED to Teams")
+
+        send_to_teams(
+            alert_name=alert_name,
+            alert_id=alert_id,
+            instance_id=instance_id,
+            status="RESOLVED"
+        )
+
+        return jsonify({"status": "resolved"}), 200
 
     return jsonify({"status": "ignored"}), 200
 
-
 # -------------------------------------------------
-# Health check
-# -------------------------------------------------
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"}), 200
-
-
-# -------------------------------------------------
-# App entrypoint
+# Entrypoint
 # -------------------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
