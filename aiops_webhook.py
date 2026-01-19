@@ -30,6 +30,8 @@ pending_alerts = {}
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
+
+
 def extract_instance_id(payload: dict) -> str:
     """
     Extract EC2 Instance ID from Coralogix metric alert payload
@@ -41,8 +43,52 @@ def extract_instance_id(payload: dict) -> str:
             for name in ("InstanceId", "instance_id", "instanceId"):
                 if name in section:
                     return section[name]
-
     return "unknown"
+
+# -------------------------------------------------
+# Microsoft Graph helpers
+# -------------------------------------------------
+def get_graph_token():
+    app_msal = ConfidentialClientApplication(
+        GRAPH_CLIENT_ID,
+        authority=f"https://login.microsoftonline.com/{GRAPH_TENANT_ID}",
+        client_credential=GRAPH_CLIENT_SECRET
+    )
+    token = app_msal.acquire_token_for_client(
+        scopes=["https://graph.microsoft.com/.default"]
+    )
+    return token.get("access_token")
+
+
+def send_email(subject, body):
+    token = get_graph_token()
+    if not token:
+        LOG.error("Failed to obtain Graph token")
+        return
+
+    url = f"https://graph.microsoft.com/v1.0/users/{EMAIL_FROM}/sendMail"
+    payload = {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": "Text", "content": body},
+            "toRecipients": [
+                {"emailAddress": {"address": EMAIL_TO}}
+            ]
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    r = requests.post(url, headers=headers, json=payload, timeout=10)
+    LOG.info("Email sent status: %s", r.status_code)
+
+
+# -------------------------------------------------
+# Teams helper
+# -------------------------------------------------
 
 def send_to_teams(payload: dict):
     headers = {"Content-Type": "application/json"}
