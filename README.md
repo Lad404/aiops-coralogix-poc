@@ -19,33 +19,76 @@ The solution is deployed on an **AWS EC2 instance**, exposed securely over **HTT
 
 ## 🧱 Architecture (Final)
 
-```
-AWS EC2 (CPU Metrics)
-   │
-   ▼
-AWS CloudWatch
-   │
-   ▼
-Coralogix AWS Integration
-(CloudFormation – no manual metric streams)
-   │
-   ▼
-Coralogix Metric Alert
-   │
-   ▼
-Outbound Webhook (HTTPS)
-   │
-   ▼
-Cloudflare Tunnel (trycloudflare.com)
-   │
-   ▼
-AIOps Flask Engine (EC2 :5000)
-   │
-   ├─ Alert resolved  → Microsoft Teams (Power Automate Webhook)
-   └─ Alert unresolved → Outlook Email (Microsoft Graph)
+---
+
+## 1️⃣ GitHub-Ready Architecture Diagram (Mermaid)
+
+```mermaid
+flowchart LR
+    subgraph AWS["AWS Account"]
+        EC2["EC2 Instance (c5.large)\nCPU Load via stress-ng"]
+        CW["Amazon CloudWatch\nEC2 Metrics"]
+    end
+
+    subgraph Coralogix["Coralogix Platform"]
+        CFN["CloudFormation Stack\n(Coralogix AWS Integration)"]
+        METRICS["Metrics Ingestion"]
+        ALERT["Metric Alert\n(CPU Threshold)"]
+        WEBHOOK["Outbound Webhook"]
+        GRAFANA["Coralogix Hosted Grafana\n(Metric Verification)"]
+    end
+
+    subgraph Internet["Public HTTPS Access"]
+        CF["Cloudflare Tunnel\ntrycloudflare.com"]
+    end
+
+    subgraph AIOps["AIOps Engine (EC2)"]
+        FLASK["Flask Webhook API\n/coralogix/webhook"]
+        LOGIC["Alert Logic\n(TRIGGERED / RESOLVED)"]
+    end
+
+    subgraph Notifications["Notification Channels"]
+        TEAMS["Microsoft Teams\n(Power Automate Webhook)"]
+        GRAPH["Microsoft Graph API\n(Outlook Email)"]
+    end
+
+    EC2 --> CW
+    CW --> CFN
+    CFN --> METRICS
+    METRICS --> GRAFANA
+    METRICS --> ALERT
+    ALERT --> WEBHOOK
+    WEBHOOK --> CF
+    CF --> FLASK
+    FLASK --> LOGIC
+    LOGIC --> TEAMS
+    LOGIC --> GRAPH
 ```
 
+## 3️⃣ Architecture Explanation 
+
+### Alert Flow (End-to-End)
+
+1. CPU load is generated on **EC2** using `stress-ng`
+2. **CloudWatch** captures EC2 CPU metrics
+3. **Coralogix AWS Integration (CloudFormation)** pulls metrics automatically
+4. Metrics appear in **Coralogix Hosted Grafana** (verification step)
+5. **Metric Alert** evaluates CPU threshold
+6. On breach, **Outbound Webhook** is triggered
+7. Webhook reaches EC2 via **Cloudflare HTTPS Tunnel**
+8. **Flask AIOps service** receives payload
+9. Logic executes:
+
+   * **TRIGGERED** → start monitoring
+   * **RESOLVED** → notify Teams
+   * **Unresolved** → send Outlook email
+10. Notifications sent via:
+
+    * **Teams (Power Automate)**
+    * **Microsoft Graph (Outlook)**
+
 ---
+
 
 ## 📁 Directory Structure
 
