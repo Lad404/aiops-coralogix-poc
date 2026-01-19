@@ -713,6 +713,7 @@ Expected behavior:
 * Coralogix webhooks **cannot inject instance ID directly**
 * Instance ID must exist as **metric label**
 * Cloudflare quick tunnels are **non-persistent** (POC only)
+* Could not send mail due to insufficient permission for App registration in Azure
 
 ---
 
