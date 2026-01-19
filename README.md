@@ -87,6 +87,202 @@ Install dependencies:
 ```bash
 pip install flask requests msal
 ```
+Below is a **standalone, production-ready README section** you can **directly paste** into your `README.md`.
+It documents **Azure App Registration for Outlook (Microsoft Graph)** exactly as used in your AIOps POC, with **no assumptions** and **no skipped steps**.
+
+---
+
+## 🔹 Azure App Registration (Outlook / Microsoft Graph – Email Escalation)
+
+This section explains how to create an **Azure App Registration** that allows the AIOps service to send **email alerts via Microsoft Graph** when alerts remain unresolved.
+
+This app is used **only for email escalation**, not for Teams.
+
+---
+
+### 1️⃣ Create App Registration
+
+1. Log in to **Azure Portal**
+2. Navigate to:
+
+```
+Azure Active Directory → App registrations → New registration
+```
+
+3. Fill the details:
+
+| Field                       | Value               |
+| --------------------------- | ------------------- |
+| **Name**                    | `AIOps-Mail-Sender` |
+| **Supported account types** | Single tenant       |
+| **Redirect URI**            | Leave empty         |
+
+4. Click **Register**
+
+---
+
+### 2️⃣ Capture Application Details
+
+After creation, note the following values (used later as environment variables):
+
+| Azure Field                 | Used As           |
+| --------------------------- | ----------------- |
+| **Application (client) ID** | `GRAPH_CLIENT_ID` |
+| **Directory (tenant) ID**   | `GRAPH_TENANT_ID` |
+
+---
+
+### 3️⃣ Create Client Secret
+
+1. Go to:
+
+```
+Certificates & secrets → Client secrets → New client secret
+```
+
+2. Fill:
+
+   * Description: `aiops-mail-secret`
+   * Expiry: 90 days (or per policy)
+
+3. Click **Add**
+
+4. **Immediately copy the Value**
+   ⚠️ You cannot retrieve it again
+
+Used as:
+
+```
+GRAPH_CLIENT_SECRET
+```
+
+---
+
+### 4️⃣ Configure Microsoft Graph API Permissions
+
+1. Go to:
+
+```
+API permissions → Add a permission → Microsoft Graph
+```
+
+2. Select:
+
+```
+Application permissions
+```
+
+3. Add:
+
+```
+Mail.Send
+```
+
+4. Click **Add permissions**
+
+---
+
+### 5️⃣ Grant Admin Consent (Mandatory)
+
+1. In **API permissions**
+2. Click:
+
+```
+Grant admin consent for <Tenant Name>
+```
+
+3. Ensure status shows:
+
+```
+Granted for <Tenant>
+```
+
+⚠️ Without admin consent, emails **will always fail (403)**.
+
+---
+
+### 6️⃣ Assign Mailbox to Send From
+
+Decide which mailbox will send escalation emails.
+
+Example:
+
+```
+alerts@company.com
+```
+
+This value is used as:
+
+```
+EMAIL_FROM
+```
+
+Recipient email:
+
+```
+EMAIL_TO
+```
+
+---
+
+### 7️⃣ Required Environment Variables
+
+Add the following to your **systemd service** or shell environment:
+
+```bash
+GRAPH_TENANT_ID=<tenant-id>
+GRAPH_CLIENT_ID=<client-id>
+GRAPH_CLIENT_SECRET=<client-secret>
+
+EMAIL_FROM=alerts@company.com
+EMAIL_TO=your.email@company.com
+```
+
+---
+
+### 8️⃣ Verify Token Generation (Optional Manual Test)
+
+Run from EC2 to verify authentication:
+
+```bash
+curl -X POST \
+  https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=<CLIENT_ID>" \
+  -d "scope=https://graph.microsoft.com/.default" \
+  -d "client_secret=<CLIENT_SECRET>" \
+  -d "grant_type=client_credentials"
+```
+
+Expected result:
+
+```json
+{
+  "access_token": "eyJ0eXAiOiJKV1Qi..."
+}
+```
+
+---
+
+### 9️⃣ How AIOps Uses This App
+
+| Event                      | Action                         |
+| -------------------------- | ------------------------------ |
+| Alert triggered            | Timer started                  |
+| Alert unresolved (10 mins) | Email sent via Microsoft Graph |
+| Alert resolved             | No email                       |
+
+---
+
+### ⚠️ Known Limitations
+
+* Email failures return **403** if:
+
+  * Admin consent missing
+  * Mailbox not licensed
+  * App secret expired
+* App-only Graph permissions **cannot read inbox**
+* This app is **not used for Teams notifications**
 
 ---
 
@@ -257,8 +453,14 @@ https://random-name.trycloudflare.com/coralogix/webhook
 1. Coralogix → **Integrations**
 2. Choose **AWS CloudWatch Metrics**
 3. Provide AWS Account ID & Region
+<img width="1771" height="1043" alt="Screenshot 2026-01-19 131945" src="https://github.com/user-attachments/assets/acbdf3fa-2647-4a51-9217-34c8700426a8" />
+<img width="1659" height="679" alt="Screenshot 2026-01-19 132012" src="https://github.com/user-attachments/assets/dc81f94c-210f-45ae-ada8-35c942cecc8c" />
+
 4. Coralogix deploys **CloudFormation stack automatically**
+<img width="1746" height="985" alt="Screenshot 2026-01-19 132026" src="https://github.com/user-attachments/assets/c1bf1651-56cf-4180-9667-5ac608af5020" />
+
 5. Metrics visible in **Hosted Grafana**
+<img width="1916" height="1040" alt="Screenshot 2026-01-17 173933" src="https://github.com/user-attachments/assets/517889d4-c347-4778-9819-e3d34bc53a07" />
 
 ✅ No manual metric streams created.
 
