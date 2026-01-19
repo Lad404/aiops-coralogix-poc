@@ -1,13 +1,12 @@
-
 [Unit]
-Description=AIOps Coralogix monitor
+Description=AIOps Coralogix Monitor
 After=network.target
 
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu/aiops-venv
-ExecStart=/home/ubuntu/aiops-venv/bin/python /home/ubuntu/aiops-venv/aiops_webhook.py
 EnvironmentFile=/etc/aiops.env
+ExecStart=/home/ubuntu/aiops-venv/bin/python /home/ubuntu/aiops-venv/aiops_webhook.py
 Restart=on-failure
 RestartSec=5
 
