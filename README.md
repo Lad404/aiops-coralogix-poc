@@ -522,11 +522,7 @@ Example condition:
 
 ---
 
-## 🔹 Step 9: Coralogix Webhook Body (FINAL)
-
-Below is a **drop-in README section** you can **copy-paste exactly** into your existing `README.md`.
-It is **only** for **creating the outbound webhook in Coralogix**, written in the same style as the rest of the doc and aligned with what you actually configured and tested.
-
+## 🔹 Step 9: Coralogix Webhook Body  
 ---
 
 ## 🔹 Creating the Outbound Webhook in Coralogix
